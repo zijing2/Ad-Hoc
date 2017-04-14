@@ -18,12 +18,12 @@ public class MFConfig {
 	
 	public static void initConfig(String pr, String gv, String ga, String af, String pd, String hg){
 		validation(pr, gv, ga, af, pd, hg);
-		S = pr.split(",");
-		N = Integer.parseInt(gv);
-		V = ga.split(",");
-		F = af.split(",");
-		O = pd.split(",");
-		G = hg;
+		S = pr.replaceAll("\\s", "").split(",");
+		N = Integer.parseInt(gv.replaceAll("\\s", ""));
+		V = ga.replaceAll("\\s", "").split(",");
+		F = af.replaceAll("\\s", "").split(",");
+		O = pd.replaceAll("\\s", "").split(",");
+		G = hg.replaceAll("\\s", "");
 	}
 	
 	public static void validation(String pr, String gv, String ga, String af, String pd, String hg){

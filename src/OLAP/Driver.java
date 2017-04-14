@@ -7,16 +7,19 @@ import java.sql.SQLException;
 import java.sql.Statement;
 
 
+
 public class Driver {
 	
 	private static Statement stmtInsetance = null;
 
 	public static void connect() {
 		
-		String usr ="postgres";
-		String pwd ="";
-		String url ="jdbc:postgresql://localhost:5432/huangzijing";
-
+		//Call load_properties() to load config.properties into into configuration strings
+		String[] db_config = LoadProperties.load_properties();
+		String usr = db_config[0];
+		String pwd = db_config[1];
+		String url = db_config[2];
+		System.out.print(url);
 		try
 		{
 			Class.forName("org.postgresql.Driver");
@@ -37,7 +40,7 @@ public class Driver {
 			Statement stmt = conn.createStatement();
 			
 			stmtInsetance = stmt;
-			
+//			
 //			ResultSet rs = stmt.executeQuery("SELECT * FROM Sales");
 //			
 //			while (rs.next())
