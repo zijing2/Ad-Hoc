@@ -14,8 +14,7 @@ import javax.script.*;
 
 public class Main {
 	
-	
-	public static ArrayList<HashMap<String, HashMap<String, Integer>>> map_list;
+	public static HashMap<String, HashMap<String, Integer>> H;
 
 	public static void main(String[] args) {
 		MFConfig.initConfig(
@@ -48,7 +47,7 @@ public class Main {
 			String ga = br.readLine();
 			System.out.println("F-VECT([F]):");
 			String af = br.readLine();
-			System.out.println("SELECT CONDITION-VECT([Ïƒ]):");
+			System.out.println("SELECT CONDITION-VECT([¦Ò]):");
 			String pd = br.readLine();
 			System.out.println("HAVING_CONDITION(G):");
 			String hg = br.readLine();
@@ -68,17 +67,11 @@ public class Main {
 		ResultSet rs;
 		ScriptEngineManager manager = new ScriptEngineManager();  
         ScriptEngine engine = manager.getEngineByName("js");
-        
-        map_list = new ArrayList<HashMap<String, HashMap<String, Integer>>>();
-        for(int i = 0; i <= MFConfig.N; i++){
-        	map_list.add(new HashMap<String, HashMap<String, Integer>>());
-        }
-		
+		H  = new HashMap<String, HashMap<String, Integer>>();
 		
 		//go through each grouping variable (vertical)
-		for(int i=0;i < map_list.size();i++){
+		for(int i=0;i<=MFConfig.N;i++){
 			//System.out.println("-----------");
-			HashMap<String, HashMap<String, Integer>> H = map_list.get(i);
 			try {
 				rs = stmtInsetance.executeQuery("SELECT * FROM Sales");
 				while (rs.next())
@@ -91,34 +84,21 @@ public class Main {
 					//String ga = rs.getString("cust");
 					//denote grouping attribute
 					if(i==0){
-						
-						// if ga group does not exist in outer map
 						if(H.get(ga)==null){
 							HashMap<String, Integer> map =  new HashMap<String, Integer>();
-							map.put("max", rs.getInt("quant"));
-							map.put("min", rs.getInt("quant"));
-							map.put("sum", rs.getInt("quant"));
-							map.put("count", 1);
-							map.put("avg", rs.getInt("quant"));
+							for(int j=0;j<MFConfig.F.length;j++){
+								//if there is avg, then change to count + sum
+								if(MFConfig.F[j].trim().indexOf("avg")>=0){
+									map.put(MFConfig.F[j].trim().replace("avg", "sum"), null);
+									map.put(MFConfig.F[j].trim().replace("avg", "count"), null);
+								}else{
+									map.put(MFConfig.F[j].trim(), null);
+								}
+								
+							}
 							H.put(ga, map);
 						}else{
-							HashMap<String, Integer> map = H.get(ga);
-							int max= Math.max(map.get("max"), rs.getInt("quant"));
-							map.put("max", max);
-							
-							int min = Math.min(map.get("min"), rs.getInt("quant"));
-							map.put("min", min);
-							
-							int sum = map.get("min") + rs.getInt("quant");
-							map.put("sum", sum);
-							
-							int count = map.get("count") + 1;
-							map.put("count", count);
-							
-							int avg = map.get("sum") / map.get("count");
-							map.put("avg", avg);
-							
-							H.put(ga, map);
+							continue;
 						}
 					}else{
 						//traverse each grouping variable
@@ -137,7 +117,7 @@ public class Main {
 							e.printStackTrace();
 						} 
 						//System.out.println(rs.getString("state")+"|"+result);
-						if((Boolean) result){
+						if((Boolean)result){
 						//if(rs.getString("state").equals("NY")){
 							HashMap<String, Integer> map = H.get(ga);
 							//walk though hashmap keys and find related F
@@ -178,14 +158,9 @@ public class Main {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			
-			for(Map.Entry<String, HashMap<String, Integer>> entry : H.entrySet()){
-				System.out.println(entry.getKey()+ " "+ entry.getValue().get("avg") +" "+ entry.getValue().get("sum")+" "+ entry.getValue().get("count"));
-			}
 		}
 		
-		
+		System.out.println(H);
 //		Statement stmtInsetance = Driver.getConnectionSingleton();
 //		ResultSet rs;
 //		try {
