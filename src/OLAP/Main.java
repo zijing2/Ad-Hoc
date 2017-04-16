@@ -19,7 +19,7 @@ public class Main {
 	public static void main(String[] args) {
 		MFConfig.initConfig(
 				//S
-				"cust, 1_sum_quant, 2_sum_quant, 3_sum_quant",
+				"prod, cust, 1_sum_quant, 2_sum_quant, 3_sum_quant",
 				//N
 				"3",
 				//V
@@ -161,6 +161,9 @@ public class Main {
 		}
 		
 		System.out.println(H);
+		
+		Display dis = new Display(H);
+		dis.display();
 //		Statement stmtInsetance = Driver.getConnectionSingleton();
 //		ResultSet rs;
 //		try {
