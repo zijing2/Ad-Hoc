@@ -30,4 +30,21 @@ public class MFConfig {
 		//TODO argument validation
 	}
 	
+	public static boolean checkN(){
+		return true;
+	}
+	
+	public static boolean checkS(String N, String V, String S) throws Exception{
+		throw new Exception("aaaaa");
+		
+//		for(int i=0;i<S.length;i++){
+//			if(i<V.length){
+//				if(V[i].equals(S[i])){
+//					throw new Exception("afd");
+//				}
+//			}
+//		}
+		//return true;
+	}
+	
 }

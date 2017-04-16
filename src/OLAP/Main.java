@@ -39,22 +39,34 @@ public class Main {
 	public static void prompt(){
 		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
 		try {
-			System.out.println("SELECT ATTRIBUTE(S):");
-			String pr = br.readLine();
 			System.out.println("NUMBER OF GROUPING VARIABLES(n):");
 			String gv = br.readLine();
+			
 			System.out.println("GROUPING ATTRIBUTES(V):");
 			String ga = br.readLine();
-			System.out.println("F-VECT([F]):");
-			String af = br.readLine();
-			System.out.println("SELECT CONDITION-VECT([σ]):");
-			String pd = br.readLine();
-			System.out.println("HAVING_CONDITION(G):");
-			String hg = br.readLine();
+			System.out.println("SELECT ATTRIBUTE(S):");
+			String pr = br.readLine();
+			try{
+				//MFConfig.checkS();
+			}catch(Exception e){
+				System.out.print(e);
+			}
 			
-			MFConfig.initConfig(pr, gv, ga, af, pd, hg);
+
+//			System.out.println("F-VECT([F]):");
+//			String af = br.readLine();
+//			String pd = "";
+//			for(int i=1; i <= Integer.parseInt(gv);i++){
+//				System.out.println("SELECT CONDITION-VECT([σ]) for groupping variable X" + i + ":");
+//				pd += br.readLine() + ",";
+//			}
+//			System.out.println("HAVING_CONDITION(G):");
+//			String hg = br.readLine();
 			
-			System.out.println(MFConfig.S[0]);
+//			System.out.println(pd);
+			//MFConfig.initConfig(pr, gv, ga, af, pd, hg);
+			
+			//System.out.println(MFConfig.S[0]);
 
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
