@@ -17,17 +17,25 @@ public class MFConfig {
 	public static String G;
 	
 	public static void initConfig(String pr, String gv, String ga, String af, String pd, String hg){
-		validation(pr, gv, ga, af, pd, hg);
+		
 		S = pr.replaceAll("\\s", "").split(",");
 		N = Integer.parseInt(gv.replaceAll("\\s", ""));
 		V = ga.replaceAll("\\s", "").split(",");
 		F = af.replaceAll("\\s", "").split(",");
 		O = pd.replaceAll("\\s", "").split(",");
 		G = hg.replaceAll("\\s", "");
+		validation();
 	}
 	
-	public static void validation(String pr, String gv, String ga, String af, String pd, String hg){
+	public static void validation(){
 		//TODO argument validation
+		Validation validation = new Validation();
+		try {
+			validation.isValid();
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			System.out.println(e.getMessage());
+		}
 	}
 	
 }

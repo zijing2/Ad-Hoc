@@ -36,9 +36,8 @@ public class Validation {
 																}};
 		
 																
-																
+		// Constructor of this class. Load in the MFConfig														
 		public Validation(){
-			
 			this.S = new ArrayList<String>(Arrays.asList(MFConfig.S)); // select
 			this.N = MFConfig.N;
 			this.V = new ArrayList<String>(Arrays.asList(MFConfig.V)); // group by
@@ -48,7 +47,7 @@ public class Validation {
 			
 		}
 		
-		
+		//Public method. Call all the private validation methods.
 		public boolean isValid() throws Exception{
 			try {
 				isValidSelect();
@@ -61,7 +60,7 @@ public class Validation {
 			return true;
 		}
 		
-		
+		//Examine the select statement
 		private boolean isValidSelect() throws Exception{
 			int max_gv = -1;
 			for(String str : S){
@@ -83,6 +82,8 @@ public class Validation {
 			return true;
 		}
 		
+		
+		//Examine the function statement
 		private boolean isValidFunctionVariables() throws Exception{
 			
 			//Traverse the Functions, check if all the aggregate functions are valid. Find the maximum ID of grouping variables

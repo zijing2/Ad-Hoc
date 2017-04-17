@@ -19,7 +19,7 @@ public class Main {
 	public static void main(String[] args) {
 		MFConfig.initConfig(
 				//S
-				"prod, cust, 1_sum_quant, 2_sum_quant, 3_sum_quant",
+				"prod, cust, 2_sum_quant, 2_avg_quant, 3_sum_quant",
 				//N
 				"3",
 				//V
