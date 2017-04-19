@@ -23,32 +23,35 @@ public class Main {
 	public static void main(String[] args) {
 		MFConfig.initConfig(
 				//S
-				"cust,prod,1_sum_quant,2_count_quant,3_sum_quant",
+				"cust,month,1_avg_quant,1_sum_quant,1_count_quant,0_sum_quant,0_count_quant,2_sum_quant,2_count_quant",
 				//N
-				"3",
+				"2",
 				//V
-				"cust,prod",
+				"cust,month",
 				//F
-				"1_sum_quant, 1_avg_quant, 2_sum_quant, 2_avg_quant, 3_sum_quant, 3_avg_quant", 
+				"1_sum_quant, 1_avg_quant, 2_sum_quant, 2_avg_quant", 
 				//O
-				"state='NY',state='NJ',state='CT'",
+				"1.cust=cust and 1.month>month,2.cust=cust and 2.month<month",
 				//G
 				"1_sum_quant > 2 * 2_sum_quant or 1_avg_quant > 3_avg_quant");
 		
-//		try{
+		try{
 			init();
 			//prompt();
+			topologicalSort();
 			evaluate();
 			render();
 //		}catch(endProgramExeption e){
-//			System.out.print(e.message);
-//		}
+//			System.out.println(e.message);
+		}catch(Exception e){
+			System.out.println(e);
+		}
 	}
 	
 	public static void init(){
 		TableSchema.InitTableSchema();
 		ScriptEngineManager manager = new ScriptEngineManager();
-		engine = manager.getEngineByName("js");
+		engine = manager.getEngineByName("javascript");
 		//suchThatClauseParser("1.month > month and 1.state = 'NY'");
 	}
 	
@@ -60,13 +63,24 @@ public class Main {
 		}
 	}
 	
+	/*
+	 * topologicalSort base on such that dependency, result store on Graph.seq_arr
+	 */
+	public static void topologicalSort() throws Exception{
+		Graph.initG();
+		Graph.topoligicalSort();
+//		for(int i=0;i<Graph.seq_arr.length;i++){
+//			System.out.println(Graph.seq_arr[i]);
+//		}
+	}
+	
 	public static void evaluate(){
 		  
-        
 		H  = new HashMap<String, HashMap<String, String>>();
 		
 		//go through each grouping variable (vertical)
-		for(int i=0;i<=MFConfig.N;i++){
+		for(int r=0;r<=MFConfig.N;r++){
+			int i = Integer.parseInt(Graph.seq_arr[r]);
 			try {
 				ResultSet rs = Data.getSalesRow();
 				while (rs.next())
@@ -75,28 +89,28 @@ public class Main {
 					if(i==0){
 						initX0(rs);
 					}else{
-						ArrayList<String> ga_list = new ArrayList<String>();
-						for(int k=0;k<MFConfig.V.length;k++){
-							ga_list.add(rs.getString(MFConfig.V[k]));
-						}
-						String ga = MFConfig.bindGA(ga_list);
 						//traverse each grouping variable 
 						//and each row compare with all grouping attributes and grouping variables
 						//range of grouping variable
-						if(suchThat(MFConfig.O[i-1], rs)){
-							HashMap<String, String> map = H.get(ga);
-							//walk though hashmap keys and find related F
-							Iterator iter = map.entrySet().iterator();
-							while(iter.hasNext()) {
-						           Map.Entry entry = (Map.Entry)iter.next();
-						           String key = entry.getKey().toString();
-						           aggregateFunction(ga,key,i,rs);
+						Iterator iter_outter = H.entrySet().iterator();
+						while(iter_outter.hasNext()){
+							Map.Entry entry_outter = (Map.Entry)iter_outter.next();
+							String ga = entry_outter.getKey().toString();
+							String[]ga_list = MFConfig.debindGA(ga);
+							if(suchThat(MFConfig.O[i-1], rs, i, ga_list)){
+								HashMap<String, String> map = H.get(ga);
+								//walk though hashmap keys and find related F
+								Iterator iter = map.entrySet().iterator();
+								while(iter.hasNext()) {
+							           Map.Entry entry = (Map.Entry)iter.next();
+							           String key = entry.getKey().toString();
+							           aggregateFunction(ga,key,i,rs);
+								}
 							}
 						}
 					}
 				}
 			} catch (SQLException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
@@ -126,7 +140,7 @@ public class Main {
 			//add X1~Xn structure to hashmap
 			HashMap<String, String> map =  new HashMap<String, String>();
 			for(int j=0;j<MFConfig.F.length;j++){
-				//if there is avg, then change to count + sum
+				//if there is "avg", then change to "count" + "sum"
 				if(MFConfig.F[j].trim().indexOf("avg")>=0){
 					map.put(MFConfig.F[j].trim().replace("avg", "sum"), null);
 					map.put(MFConfig.F[j].trim().replace("avg", "count"), null);
@@ -228,22 +242,45 @@ public class Main {
 	 * 更新范围就是grouping attribute为key里面的数据。
 	 * 当grouping attribute中有>或<时就不是更新特定一个hashmap，而是一组数据。比如1.month>month,
 	 * 这时更新的就是hashmap里面month<=现在这条数据month的key的hash值。
+	 * 
+	 * clause : such that clause of particular grouping variable
+	 * rs : a row of data
+	 * round_num : denote which grouping variable we are processings
+	 * ga : grouping attribute for this time, for example ["Bloom", "Pepsi"]
 	 */
-	private static boolean suchThat(String clause, ResultSet rs){
+	private static boolean suchThat(String clause, ResultSet rs, int round_num, String[] ga){
 		//find expressions which not belong to grouping attribute
 		Object result = null;
 		try {
 			//for example (1.month > month and 1.state = "NY") to (month_1 > month and state_1 == "NY") 
+			//extra credit:(2.quant > avg(1.quant)) to (_2quant > 1_avg_quant)
 			String rgv = suchThatClauseParser(clause);
 			String[] attrs = TableSchema.getAllTableAttributes();
 			for(int i=0;i<attrs.length;i++){
-				engine.put(attrs[i], rs.getString(attrs[i]));
+				if(TableSchema.isAttributeInt(attrs[i])){
+					engine.put("_"+round_num+attrs[i], Integer.parseInt(rs.getString(attrs[i])));
+				}else{
+					engine.put("_"+round_num+attrs[i], rs.getString(attrs[i]));
+				}
 			}
-			//String state = rs.getString("state");
-			//engine.put("state", state);
+			for(int i=0;i<ga.length;i++){
+				if(TableSchema.isAttributeInt(MFConfig.V[i])){
+					engine.put(MFConfig.V[i], Integer.parseInt(ga[i]));
+				}else{
+					engine.put(MFConfig.V[i], ga[i]);
+				}
+			}
+//			engine.put("_1month", "12");
+//			engine.put("month", "7");
 			String str = "("+rgv+")";
-			//String str = "(state=='NY')";
+			//String str = "(12>7)";
+//			if(Integer.parseInt(rs.getString("month")) > Integer.parseInt(ga[1])){
+//				System.out.println(str + "   " + engine.get("cust")+"|"+engine.get("_1cust")+"|"+engine.get("_1month")+"|"+engine.get("month"));
+//			}
 			result = engine.eval(str);
+			//System.out.println(result);
+			//System.out.println(engine.get("_1month")+"|"+engine.get("month"));
+			//System.out.println(rs.getString("cust")+"|"+ga[0]+"|"+rs.getString("month")+"|"+ga[1]+"|"+result);
 		} catch (ScriptException e) {
 			e.printStackTrace();
 		} catch (SQLException e){
@@ -267,7 +304,7 @@ public class Main {
 		}
 		
 		clause = String.valueOf(arr);
-		clause = clause.replaceAll("=", "==").replaceAll("and", "&&").replaceAll("or", "||");
+		clause = clause.replaceAll("=", "==").replaceAll("and", "&&").replaceAll("or", "||").replaceAll("<>", "!=");
 		//System.out.println(clause);
 		return clause;
 	}

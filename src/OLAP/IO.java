@@ -129,6 +129,17 @@ public class IO {
 							if(gv.equalsIgnoreCase(MFConfig.S[i])){
 								output_line_gv += String.format("%"+ String.valueOf(MFConfig.S[i].length()) +"s", map2.get(gv)) + "\t";
 							}
+							if(MFConfig.S[i].indexOf("avg")!=-1){
+								String[] temp = MFConfig.S[i].split("_");
+								String sum = map2.get(temp[0]+"_sum_"+temp[2]);
+								String count = map2.get(temp[0]+"_count_"+temp[2]);
+								if(sum != null && count !=null){
+									output_line_gv += String.format("%"+ String.valueOf(MFConfig.S[i].length()) +"s", Integer.parseInt(sum)/Integer.parseInt(count)) + "\t";
+								}else{
+									output_line_gv += String.format("%"+ String.valueOf(MFConfig.S[i].length()+1) +"s", "null\t");
+								}
+								break;
+							}
 					}
 				}
 				System.out.println(output_line_ga + output_line_gv);
