@@ -57,22 +57,23 @@ public class IO {
 				}
 				
 				//validate "such that" AKA sigma
-				String temp;
+				//String temp;
 				if(MFConfig.O==null){
 					pd = "";
-					for(int i=1; i <= Integer.parseInt(gv);i++){
-						System.out.println("SELECT CONDITION-VECT([σ]) for groupping variable X" + i + ": for example(1.cust=cust and 1.state = 'NY')");
-						temp = br.readLine();
-						MFConfig.checkO(temp);
-						if(i<Integer.parseInt(gv)){
-							pd += temp + ",";
-						}else{
-							pd += temp;
-						}
-					}
+//					for(int i=1; i <= Integer.parseInt(gv);i++){
+//						System.out.println("SELECT CONDITION-VECT([σ]) for groupping variable X" + i + ": for example(1.cust=cust and 1.state = 'NY')");
+//						temp = br.readLine();
+//						MFConfig.checkO(temp);
+//						if(i<Integer.parseInt(gv)){
+//							pd += temp + ",";
+//						}else{
+//							pd += temp;
+//						}
+//					}
+					System.out.println("SELECT CONDITION-VECT([σ]):");
+					pd = br.readLine();
 					MFConfig.initO(pd);
 				}
-				
 				
 				//validate having clause
 				System.out.println("HAVING_CONDITION(G):");
@@ -80,10 +81,6 @@ public class IO {
 				MFConfig.checkG(hg);
 				MFConfig.initG(pd);
 				
-				//MFConfig.initConfig(pr, gv, ga, af, pd, hg);
-				
-				//System.out.println(MFConfig.S[0]);
-
 			}catch(IOException e1){
 				System.out.print(e1);
 			}catch(endProgramExeption e2){

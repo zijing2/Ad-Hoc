@@ -21,28 +21,28 @@ public class Main {
 	public static ScriptEngine engine;
 
 	public static void main(String[] args) {
-		MFConfig.initConfig(
-				//S
-				"cust,month,1_avg_quant,1_sum_quant,1_count_quant,0_sum_quant,0_count_quant,2_sum_quant,2_count_quant",
-				//N
-				"2",
-				//V
-				"cust,month",
-				//F
-				"1_sum_quant, 1_avg_quant, 2_sum_quant, 2_avg_quant", 
-				//O
-				"1.cust=cust and 1.month>month,2.cust=cust and 2.month<month",
-				//G
-				"1_sum_quant > 2 * 2_sum_quant or 1_avg_quant > 3_avg_quant");
+//		MFConfig.initConfig(
+//				//S
+//				"cust,prod,1_avg_quant,2_avg_quant",
+//				//N
+//				"2",
+//				//V
+//				"cust,prod",
+//				//F
+//				"1_avg_quant,2_avg_quant", 
+//				//O
+//				"1.cust=cust and 1.prod>prod,2.cust<>cust and 2.prod=prod",
+//				//G
+//				"1_sum_quant > 2 * 2_sum_quant or 1_avg_quant > 3_avg_quant");
 		
 		try{
 			init();
-			//prompt();
+			prompt();
 			topologicalSort();
 			evaluate();
 			render();
-//		}catch(endProgramExeption e){
-//			System.out.println(e.message);
+		}catch(endProgramExeption e){
+			System.out.println(e.message);
 		}catch(Exception e){
 			System.out.println(e);
 		}
@@ -58,6 +58,7 @@ public class Main {
 	public static void prompt() throws endProgramExeption{
 		try{
 			IO.prompt();
+			System.out.println("please wait a second...");
 		}catch(endProgramExeption e){
 			throw new endProgramExeption();
 		}
