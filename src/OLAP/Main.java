@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.script.*;
 
@@ -21,23 +23,23 @@ public class Main {
 	public static ScriptEngine engine;
 
 	public static void main(String[] args) {
-//		MFConfig.initConfig(
-//				//S
-//				"cust,prod,1_avg_quant,2_avg_quant",
-//				//N
-//				"2",
-//				//V
-//				"cust,prod",
-//				//F
-//				"1_avg_quant,2_avg_quant", 
-//				//O
-//				"1.cust=cust and 1.prod>prod,2.cust<>cust and 2.prod=prod",
-//				//G
-//				"1_sum_quant > 2 * 2_sum_quant or 1_avg_quant > 3_avg_quant");
+		MFConfig.initConfig(
+				//S
+				"prod,month,1_avg_quant,2_count_quant,3_avg_quant",
+				//N
+				"3",
+				//V
+				"prod,month",
+				//F
+				"1_avg_quant,2_count_quant,3_avg_quant", 
+				//O
+				"1.prod=prod and 1.month=month-1, 2.prod=prod and 2.month = month and 2.quant>avg( 1.quant ) and 2.quant<avg(3.quant),3.prod=prod and 3.month=month+1",
+				//G
+				"3_avg_quant>1_avg_quant");
 		
 		try{
 			init();
-			prompt();
+			//prompt();
 			topologicalSort();
 			evaluate();
 			render();
@@ -46,6 +48,7 @@ public class Main {
 		}catch(Exception e){
 			System.out.println(e);
 		}
+		
 	}
 	
 	public static void init(){
@@ -75,7 +78,7 @@ public class Main {
 //		}
 	}
 	
-	public static void evaluate(){
+	public static void evaluate() throws ScriptException{
 		  
 		H  = new HashMap<String, HashMap<String, String>>();
 		
@@ -115,6 +118,9 @@ public class Main {
 				e.printStackTrace();
 			}
 		}
+		
+		//execute having clause
+		having();
 	}
 	
 	/*
@@ -268,20 +274,48 @@ public class Main {
 				if(TableSchema.isAttributeInt(MFConfig.V[i])){
 					engine.put(MFConfig.V[i], Integer.parseInt(ga[i]));
 				}else{
-					engine.put(MFConfig.V[i], ga[i]);
+					if(ga[i]==null){
+						engine.put(MFConfig.V[i], "=false");
+					}else{
+						engine.put(MFConfig.V[i], ga[i]);
+					}
 				}
 			}
-//			engine.put("_1month", "12");
-//			engine.put("month", "7");
+			
+			//if such that contains dependents
+			if(rgv.indexOf("avg(")!=-1 || rgv.indexOf("sum(")!=-1 ||  rgv.indexOf("count(")!=-1 || rgv.indexOf("max(")!=-1 || rgv.indexOf("min(")!=-1){
+				HashMap<String, String> res = suchThatClauseDependentsParser(rgv);
+				Iterator iter = res.entrySet().iterator();
+				String ga_list = MFConfig.bindGA(ga);
+				while(iter.hasNext()){
+					Map.Entry entry_outter = (Map.Entry)iter.next();
+					String key = entry_outter.getKey().toString();
+					if(key.equals("rgv")){
+						rgv = res.get(key);
+					}else{
+						//compute avg
+						if(key.indexOf("avg")!=-1){
+							String value_temp;
+							String sum_temp = res.get(key).replace("avg", "sum");
+							String count_temp = res.get(key).replace("avg", "count");
+							if(H.get(ga_list).get(sum_temp)==null||H.get(ga_list).get(count_temp)==null){
+								value_temp = "=false";
+							}else{
+								value_temp = String.valueOf(Integer.parseInt(H.get(ga_list).get(sum_temp))/Integer.parseInt(H.get(ga_list).get(count_temp)));
+							}
+							engine.put(key, value_temp);
+						}else{
+							if(H.get(ga_list).get(res.get(key))==null){
+								engine.put(key, "=false");
+							}else{
+								engine.put(key, H.get(ga_list).get(res.get(key)));
+							}
+						}
+					}
+				}
+			}
 			String str = "("+rgv+")";
-			//String str = "(12>7)";
-//			if(Integer.parseInt(rs.getString("month")) > Integer.parseInt(ga[1])){
-//				System.out.println(str + "   " + engine.get("cust")+"|"+engine.get("_1cust")+"|"+engine.get("_1month")+"|"+engine.get("month"));
-//			}
 			result = engine.eval(str);
-			//System.out.println(result);
-			//System.out.println(engine.get("_1month")+"|"+engine.get("month"));
-			//System.out.println(rs.getString("cust")+"|"+ga[0]+"|"+rs.getString("month")+"|"+ga[1]+"|"+result);
 		} catch (ScriptException e) {
 			e.printStackTrace();
 		} catch (SQLException e){
@@ -308,6 +342,160 @@ public class Main {
 		clause = clause.replaceAll("=", "==").replaceAll("and", "&&").replaceAll("or", "||").replaceAll("<>", "!=");
 		//System.out.println(clause);
 		return clause;
+	}
+	
+	/*
+	 * return 2 things:
+	 * 1.such that clause after parse, for example {"clasue": "_1quant>_2quant_avg && _1quant<_3quant_avg"}
+	 * 2.dependent elements mapping, like {"_2quant_avg": "2_avg_quant"}
+	 */
+	private static HashMap<String,String> suchThatClauseDependentsParser(String clause){
+		HashMap<String,String> result = new HashMap<String,String>();
+		StringBuffer temp;
+		String s = clause.replaceAll("avg\\(\\s*", "_avg").replaceAll("sum\\(\\s*", "_sum").replaceAll("count\\(\\s*", "_count").replaceAll("max\\(\\s*", "_max").replaceAll("min\\(\\s*", "_min").replaceAll("\\)", "");
+		
+		//avg
+		Pattern p = Pattern.compile("_avg_(\\w+)\\s*");
+		Matcher m = p.matcher(s);
+		while(m.find()){
+			temp = new StringBuffer();
+			//System.out.println(m.group(0));
+			for(int i=0;i<m.group(0).length();i++){
+				char c = m.group(0).charAt(i);
+				try{
+					Integer.parseInt(""+c);
+					temp.insert(0, c);
+				}catch(NumberFormatException e){
+					temp.append(c);
+				}
+			}
+			result.put(m.group(0).trim(), temp.toString().trim());
+		}
+		
+		//sum
+		p = Pattern.compile("_sum_(\\w+)\\s*");
+		m = p.matcher(s);
+		while(m.find()){
+			temp = new StringBuffer();
+			//System.out.println(m.group(0));
+			for(int i=0;i<m.group(0).length();i++){
+				char c = m.group(0).charAt(i);
+				try{
+					Integer.parseInt(""+c);
+					temp.insert(0, c);
+				}catch(NumberFormatException e){
+					temp.append(c);
+				}
+			}
+			result.put(m.group(0).trim(), temp.toString().trim());
+		}
+		
+		//max
+		p = Pattern.compile("_max_(\\w+)\\s*");
+		m = p.matcher(s);
+		while(m.find()){
+			temp = new StringBuffer();
+			for(int i=0;i<m.group(0).length();i++){
+				char c = m.group(0).charAt(i);
+				try{
+					Integer.parseInt(""+c);
+					temp.insert(0, c);
+				}catch(NumberFormatException e){
+					temp.append(c);
+				}
+			}
+			result.put(m.group(0).trim(), temp.toString().trim());
+		}
+		
+		//min
+		p = Pattern.compile("_min_(\\w+)\\s*");
+		m = p.matcher(s);
+		while(m.find()){
+			temp = new StringBuffer();
+			for(int i=0;i<m.group(0).length();i++){
+				char c = m.group(0).charAt(i);
+				try{
+					Integer.parseInt(""+c);
+					temp.insert(0, c);
+				}catch(NumberFormatException e){
+					temp.append(c);
+				}
+			}
+			result.put(m.group(0).trim(), temp.toString().trim());
+		}
+		
+		result.put("rgv", s);
+		return result;
+	}
+	
+	/*
+	 * filter result base on having clause
+	 */
+	private static void having() throws ScriptException{
+		String having_clause = havingParser(MFConfig.G);
+		System.out.println(having_clause);
+		Iterator iter1 = H.entrySet().iterator();
+		while(iter1.hasNext()){
+			Map.Entry entry1 = (Map.Entry)iter1.next();
+			String key1 = entry1.getKey().toString();
+			HashMap<String,String> inner_value = H.get(key1);
+			Iterator iter2 = inner_value.entrySet().iterator();
+			while(iter2.hasNext()){
+				Map.Entry entry2 = (Map.Entry)iter2.next();
+				String key2 = entry2.getKey().toString();
+					
+				//generate avg
+				String[] temp1 = key2.split("_");
+				String key3 = temp1[0]+"_avg_"+temp1[2];
+				char[] char_arr = key2.toCharArray();
+				char temp = char_arr[0];
+				char_arr[0] = char_arr[1];
+				char_arr[1] = temp;
+				
+				char[] char_arr1 = key3.toCharArray();
+				char temp2 = char_arr1[0];
+				char_arr1[0] = char_arr1[1];
+				char_arr1[1] = temp2;
+				
+				String sum = inner_value.get(temp1[0]+"_sum_"+temp1[2]);
+				String count = inner_value.get(temp1[0]+"_count_"+temp1[2]);
+				if(sum!=null && count!=null){
+					engine.put(String.valueOf(char_arr1), Integer.parseInt(sum)/Integer.parseInt(count));
+				}
+				if(inner_value.get(key2)==null){
+					engine.put(String.valueOf(char_arr), "=false");
+				}else{
+					engine.put(String.valueOf(char_arr), inner_value.get(key2));
+				}
+			}
+			String str = "("+having_clause+")";
+			Object result = engine.eval(str);
+			if((boolean)result==false){
+				iter1.remove();
+			}
+		}
+	}
+	
+	/*
+	 * change having clause to a proper javascript expression(the first letter can not be a number)
+	 * 1_avg_quant > 2_avg_quant => _1avg_quant > _2avg_quant
+	 */
+	private static String havingParser(String having){
+		char[] char_arr = having.toCharArray();
+		for(int i=0;i<char_arr.length;i++){
+			if((""+char_arr[i]).equals("_")){
+				try{
+					Integer.parseInt(""+char_arr[i-1]);
+					char temp = char_arr[i];
+					char_arr[i] = char_arr[i-1];
+					char_arr[i-1] = temp;
+				}catch(NumberFormatException e){
+					
+				}
+			}
+		}
+		String s = String.valueOf(char_arr);
+		return s;
 	}
 	
 	private static boolean isOperator(Character c){

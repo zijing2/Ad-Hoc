@@ -209,6 +209,18 @@ public class MFConfig {
 		return buff.toString();
 	}
 	
+	public static String bindGA(String[] list){
+		StringBuffer buff = new StringBuffer();
+		buff.append(list[0]);
+		
+		for(int i=1;i<list.length;i++){
+			buff.append("-");
+			buff.append(list[i]);
+			i++;
+		}
+		return buff.toString();
+	}
+	
 	public static String[] debindGA(String s){
 		return s.split("-");
 	}
